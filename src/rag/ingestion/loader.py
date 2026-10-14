@@ -9,6 +9,7 @@ the per-format helpers.
 from __future__ import annotations
 
 from pathlib import Path
+from pypdf import PdfReader # added for PDF reading
 
 from rag.ingestion.models import Document
 from rag.utils.logging import get_logger
@@ -48,8 +49,28 @@ class DocumentLoader:
         #    determinism. For every file whose extension is in ``_SUPPORTED_SUFFIXES``,
         #    call ``_load_one`` and collect the results.
         # 4. Return the collected list of Documents.
-        raise NotImplementedError("Workshop 2: implement DocumentLoader.load")
+        path = Path(path)
 
+        if not path.exists():
+            raise FileNotFoundError(f"Path does not exist: {path}")
+
+        documents = []
+
+        if path.is_file():
+            doc = self._load_one(path)
+            if doc is not None:
+                documents.append(doc)
+
+        elif path.is_dir():
+            for file in sorted(path.rglob("*")):
+                if file.is_file() and file.suffix.lower() in _SUPPORTED_SUFFIXES:
+                    doc = self._load_one(file)
+                    if doc is not None:
+                        documents.append(doc)
+
+        return documents
+
+        
     def _load_one(self, path: Path) -> Document | None:
         """Dispatch to the right format-specific loader. Returns None on failure."""
         # TODO Workshop 2:
@@ -59,7 +80,22 @@ class DocumentLoader:
         # - Anything else: log a warning and return None.
         # - Wrap the dispatch in try/except so a single broken file doesn't sink the
         #   whole batch (log the error, return None).
-        raise NotImplementedError("Workshop 2: implement DocumentLoader._load_one")
+        try:
+            suffix = path.suffix.lower()
+
+            if suffix in _PDF_SUFFIXES:
+                return self._load_pdf(path)
+
+            elif suffix in _TEXT_SUFFIXES:
+                return self._load_text(path)
+
+            else:
+                log.warning("Unsupported file type: %s", path)
+                return None
+
+        except Exception as e:
+            log.error("Failed to load %s: %s", path, e)
+            return None
 
     @staticmethod
     def _load_text(path: Path) -> Document:
@@ -68,7 +104,19 @@ class DocumentLoader:
         # - Read the file as UTF-8 (use ``errors="replace"`` so weird bytes don't crash).
         # - Build a ``Document`` whose ``source`` is ``str(path)`` and whose metadata
         #   includes the file extension and size in bytes.
-        raise NotImplementedError("Workshop 2: implement DocumentLoader._load_text")
+        text = path.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
+
+        return Document(
+            text=text,
+            source=str(path),
+            metadata={
+                "extension": path.suffix.lower(),
+                "size_bytes": path.stat().st_size
+            }
+        )
 
     @staticmethod
     def _load_pdf(path: Path) -> Document:
@@ -77,4 +125,20 @@ class DocumentLoader:
         # - Use ``pypdf.PdfReader`` to open the file.
         # - Extract text from each page; join pages with "\n\f\n".
         # - Build a Document whose metadata records ``page_count`` and ``size_bytes``.
-        raise NotImplementedError("Workshop 2: implement DocumentLoader._load_pdf")
+        reader = PdfReader(path)
+
+        pages = [
+            page.extract_text() or ""
+            for page in reader.pages
+        ]
+
+        text = "\n\f\n".join(pages)
+
+        return Document(
+            text=text,
+            source=str(path),
+            metadata={
+                "page_count": len(reader.pages),
+                "size_bytes": path.stat().st_size
+            }
+        )

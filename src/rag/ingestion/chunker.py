@@ -10,6 +10,7 @@ and a good baseline before students explore smarter splitters.
 from __future__ import annotations
 
 from dataclasses import replace
+from pydoc import doc
 
 from rag.config import settings
 from rag.ingestion.models import Chunk, Document
@@ -49,7 +50,10 @@ class Chunker:
         # TODO Workshop 2:
         # - For each document, call ``_chunk_one`` and accumulate the chunks.
         # - Return the flat list.
-        raise NotImplementedError("Workshop 2: implement Chunker.chunk")
+        chunks = []
+        for doc in documents:
+            chunks.extend(self._chunk_one(doc))
+        return chunks
 
     def _chunk_one(self, doc: Document) -> list[Chunk]:
         """Chunk a single Document. Empty/whitespace docs return no chunks."""
@@ -63,7 +67,40 @@ class Chunker:
         #     * metadata copied from the parent doc, plus
         #       ``chunk_index``, ``char_start``, ``char_end``.
         # - Stop when the slice reaches the end of the text.
-        raise NotImplementedError("Workshop 2: implement Chunker._chunk_one")
+        text = doc.text
+
+        if not text or not text.strip():
+            return []
+
+        chunks = []
+        step = self.size - self.overlap
+
+        for start in range(0, len(text), step):
+            end = min(start + self.size, len(text))
+            piece = text[start:end].strip()
+
+            if piece:
+                chunk_index = len(chunks)
+
+                chunk = Chunk(
+                    text=piece,
+                    source=doc.source,
+                    chunk_index=chunk_index,
+                    metadata={
+                        **doc.metadata,
+                        "chunk_index": chunk_index,
+                        "char_start": start,
+                        "char_end": end,
+                    },
+                )
+
+                chunks.append(chunk)
+
+            if end == len(text):
+                break
+
+        return chunks
+
 
     @staticmethod
     def renumber(chunks: list[Chunk]) -> list[Chunk]:
