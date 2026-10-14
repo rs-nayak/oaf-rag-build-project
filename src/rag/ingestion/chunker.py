@@ -112,3 +112,5 @@ class Chunker:
             replace(c, chunk_index=i, metadata={**c.metadata, "chunk_index": i})
             for i, c in enumerate(chunks)
         ]
+
+## uv run python scripts/ingest.py --path data/skincare_ingredients --chunk-size 1250 --chunk-overlap 50 --dry-run --> run this for 7 documents, 49 chunks
