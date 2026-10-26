@@ -52,4 +52,6 @@ class Retriever:
         #
         # Stretch: log the number of results retrieved; add a simple score
         # threshold; integrate a reranker.
-        raise NotImplementedError("Workshop 4: implement Retriever.search")
+        if not query or not query.strip():
+            return []
+        return self.store.query(query, k=k or settings.top_k, where=filters)
