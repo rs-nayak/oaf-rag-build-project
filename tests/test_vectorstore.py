@@ -10,8 +10,6 @@ import pytest
 from rag.ingestion.models import Chunk
 from rag.vectorstore.chroma_store import ChromaStore
 
-
-@pytest.mark.skip(reason="Workshop 7: round-trip add() then query().")
 def test_add_then_query_round_trips(chroma_store: ChromaStore) -> None:
     chunks = [
         Chunk(text="apples are red fruit", source="fruit.md", chunk_index=0),
@@ -26,21 +24,15 @@ def test_add_then_query_round_trips(chroma_store: ChromaStore) -> None:
     assert results[0].source == "fruit.md"
     assert results[0].chunk_index == 0
 
-
-@pytest.mark.skip(reason="Workshop 7: empty-query handling.")
 def test_query_empty_string_returns_empty(chroma_store: ChromaStore) -> None:
     assert chroma_store.query("", k=4) == []
 
-
-@pytest.mark.skip(reason="Workshop 7: clear() wipes the collection.")
 def test_clear_wipes_collection(chroma_store: ChromaStore) -> None:
     chroma_store.add([Chunk(text="x", source="s.txt", chunk_index=0)])
     assert chroma_store.count() == 1
     chroma_store.clear()
     assert chroma_store.count() == 0
 
-
-@pytest.mark.skip(reason="Workshop 7: metadata filtering.")
 def test_metadata_filter_constrains_results(chroma_store: ChromaStore) -> None:
     chroma_store.add(
         [
