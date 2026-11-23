@@ -42,7 +42,12 @@ class AnthropicLLM:
         # TODO Workshop 7 (stretch):
         # - Resolve the model name. If ``settings.llm_model`` references a Claude
         #   model, use it; otherwise fall back to ``self._DEFAULT_MODEL``.
-        raise NotImplementedError("Workshop 7 stretch: implement AnthropicLLM.__init__")
+        if model is not None:
+            self.model = model
+        elif settings.llm_model and settings.llm_model.startswith("claude"):
+            self.model = settings.llm_model
+        else:
+            self.model = self._DEFAULT_MODEL
 
     @cached_property
     def _anthropic_client(self):  # type: ignore[no-untyped-def]
@@ -62,4 +67,14 @@ class AnthropicLLM:
         #     temperature=..., messages=[{"role": "user", "content": prompt}])``.
         # - The returned ``message.content`` is a list of content blocks. Concatenate
         #   the ``.text`` of each block and strip the result.
-        raise NotImplementedError("Workshop 7 stretch: implement AnthropicLLM.generate")
+        message = self._anthropic_client.messages.create(
+            model=self.model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        return "".join(
+            block.text for block in message.content
+            if block.type == "text"
+        ).strip()

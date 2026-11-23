@@ -51,7 +51,17 @@ def format_context(chunks: list[Chunk]) -> str:
     # - Otherwise, render each chunk as a numbered block: a header line with
     #   ``[i]`` plus source + chunk index, then the text on the next line.
     # - Join blocks with a blank line.
-    raise NotImplementedError("Workshop 5: implement format_context")
+    if not chunks:
+        return "(no context retrieved)"
+
+    blocks = []
+
+    for i, chunk in enumerate(chunks, 1):
+        blocks.append(
+            f"[{i}] (source: {chunk.source}, chunk: {chunk.chunk_index})\n{chunk.text}"
+        )
+
+    return "\n\n".join(blocks)
 
 
 class RAGPipeline:
@@ -73,7 +83,9 @@ class RAGPipeline:
         """
         # TODO Workshop 5:
         # - Store ``retriever``, ``llm``, and ``prompt_template`` on ``self``.
-        raise NotImplementedError("Workshop 5: implement RAGPipeline.__init__")
+        self.retriever = retriever
+        self.llm = llm
+        self.prompt_template = prompt_template
 
     def answer(
         self,
@@ -99,4 +111,24 @@ class RAGPipeline:
         #    ``context=format_context(chunks)`` and ``question=question``.
         # 4. Call ``self.llm.generate(prompt, temperature=..., max_tokens=...)``.
         # 5. Wrap the result in :class:`Answer` and return it.
-        raise NotImplementedError("Workshop 5: implement RAGPipeline.answer")
+        if not question or not question.strip():
+            return Answer(text="Please provide a question.", question=question)
+
+        chunks = self.retriever.search(question, k=k)
+
+        prompt = self.prompt_template.format(
+            context=format_context(chunks),
+            question=question,
+        )
+
+        text = self.llm.generate(
+            prompt,
+            temperature=temperature if temperature is not None else settings.temperature,
+            max_tokens=settings.max_tokens,
+        )
+
+        return Answer(
+            text=text,
+            sources=chunks,
+            question=question,
+        )

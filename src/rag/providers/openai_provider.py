@@ -41,7 +41,12 @@ class OpenAILLM:
         # TODO Workshop 7 (stretch):
         # - Resolve the model name. If ``settings.llm_model`` references a GPT
         #   model, use it; otherwise fall back to ``"gpt-4o-mini"``.
-        raise NotImplementedError("Workshop 7 stretch: implement OpenAILLM.__init__")
+        if model is not None:
+            self.model = model
+        elif settings.llm_model and settings.llm_model.startswith("gpt"):
+            self.model = settings.llm_model
+        else:
+            self.model = "gpt-4o-mini"
 
     @cached_property
     def _openai_client(self):  # type: ignore[no-untyped-def]
@@ -60,8 +65,14 @@ class OpenAILLM:
         # - Call ``self._openai_client.chat.completions.create(model=..., messages=[
         #     {"role": "user", "content": prompt}], temperature=..., max_tokens=...)``.
         # - Return ``response.choices[0].message.content`` (stripped).
-        raise NotImplementedError("Workshop 7 stretch: implement OpenAILLM.generate")
+        response = self._openai_client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
 
+        return (response.choices[0].message.content or "").strip()
 
 class OpenAIEmbeddings:
     """OpenAI ``text-embedding-3-small`` wrapped in :class:`EmbeddingsProvider`."""
@@ -78,8 +89,8 @@ class OpenAIEmbeddings:
         """
         # TODO Workshop 7 (stretch):
         # - Store the model name on ``self``.
-        raise NotImplementedError("Workshop 7 stretch: implement OpenAIEmbeddings.__init__")
-
+        self.model = model or self._DEFAULT_MODEL
+        
     @cached_property
     def _openai_client(self):  # type: ignore[no-untyped-def]
         return _client()
@@ -96,4 +107,12 @@ class OpenAIEmbeddings:
         # - Guard against empty input.
         # - Call ``self._openai_client.embeddings.create(model=..., input=texts)``.
         # - Return ``[item.embedding for item in response.data]`` (each as a list).
-        raise NotImplementedError("Workshop 7 stretch: implement OpenAIEmbeddings.embed")
+        if not texts:
+            return []
+
+        response = self._openai_client.embeddings.create(
+            model=self.model,
+            input=texts,
+        )
+
+        return [list(item.embedding) for item in response.data]

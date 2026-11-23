@@ -54,4 +54,8 @@ class Retriever:
         # threshold; integrate a reranker.
         if not query or not query.strip():
             return []
-        return self.store.query(query, k=k or settings.top_k, where=filters)
+        return self.store.query(
+            query,
+            k=k if k is not None else settings.top_k,
+            where=filters,
+        )

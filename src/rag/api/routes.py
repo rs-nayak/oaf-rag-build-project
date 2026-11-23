@@ -40,7 +40,14 @@ def health(request: Request) -> HealthResponse:
     # - Read the store from ``_state(request).store``.
     # - Return a HealthResponse with status="ok", the active providers, and
     #   ``store.count()`` as the number of indexed chunks.
-    raise NotImplementedError("Workshop 6: implement GET /health")
+    store = _state(request).store
+
+    return HealthResponse(
+        status="ok",
+        llm_provider=settings.llm_provider,
+        embeddings_provider=settings.embeddings_provider,
+        indexed_chunks=store.count(),
+    )
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -52,7 +59,29 @@ def ask(payload: AskRequest, request: Request) -> AskResponse:
     #    temperature=payload.temperature)``.
     # 3. Convert each source ``Chunk`` into a ``Source`` schema.
     # 4. Return an ``AskResponse`` with answer, sources, and the original question.
-    raise NotImplementedError("Workshop 6: implement POST /ask")
+    pipeline = _state(request).pipeline
+
+    result = pipeline.answer(
+        payload.question,
+        k=payload.top_k,
+        temperature=payload.temperature,
+    )
+
+    sources = [
+        Source(
+            source=chunk.source,
+            chunk_index=chunk.chunk_index,
+            text=chunk.text,
+            metadata=chunk.metadata,
+        )
+        for chunk in result.sources
+    ]
+
+    return AskResponse(
+        answer=result.text,
+        sources=sources,
+        question=payload.question,
+    )
 
 
 @router.post("/ingest", response_model=IngestResponse)
@@ -66,4 +95,22 @@ def ingest(payload: IngestRequest, request: Request) -> IngestResponse:
     #    then ``store.add(chunks)``.
     # 5. Return an ``IngestResponse`` with the document/chunk counts and the
     #    final ``store.count()``.
-    raise NotImplementedError("Workshop 6: implement POST /ingest")
+    store = _state(request).store
+    target = Path(payload.path or settings.data_dir)
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail=f"Path not found: {target}")
+
+    if payload.clear:
+        store.clear()
+
+    documents = DocumentLoader().load(target)
+    chunks = Chunker().chunk(documents)
+    store.add(chunks)
+
+    return IngestResponse(
+        documents_loaded=len(documents),
+        chunks_created=len(chunks),
+        chunks_indexed=store.count(),
+        path=str(target),
+    )
