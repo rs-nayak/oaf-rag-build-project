@@ -113,6 +113,7 @@ class DocumentLoader:
             text=text,
             source=str(path),
             metadata={
+                "format": path.suffix.lower().lstrip("."),
                 "extension": path.suffix.lower(),
                 "size_bytes": path.stat().st_size
             }
@@ -138,6 +139,7 @@ class DocumentLoader:
             text=text,
             source=str(path),
             metadata={
+                "format": "pdf",
                 "page_count": len(reader.pages),
                 "size_bytes": path.stat().st_size
             }
