@@ -112,7 +112,7 @@ class RAGPipeline:
         # 4. Call ``self.llm.generate(prompt, temperature=..., max_tokens=...)``.
         # 5. Wrap the result in :class:`Answer` and return it.
         if not question or not question.strip():
-            return Answer(text="Please provide a question.", question=question)
+            return Answer(text="Your question is empty. Please provide a question.", question=question)
 
         chunks = self.retriever.search(question, k=k)
 
